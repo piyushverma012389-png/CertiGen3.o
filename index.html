@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CertiGen Studio</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+
+    <style>
+        /* Custom styles to match the original React app */
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            overflow: hidden; /* Prevent body scroll, handle in containers */
+        }
+        
+        .canvas-container {
+            background-image:
+                linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+                linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+                linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            height: 26px;
+            -webkit-appearance: none;
+            margin: 10px 0;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            animate: 0.2s;
+            background: #e5e7eb;
+            border-radius: 5px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 flex items-center justify-center z-50 transition-opacity duration-500">
+        <div class="text-center text-white">
+            <div class="flex items-center justify-center gap-4 mb-8">
+                 <!-- Icons -->
+                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-bounce"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="yellow" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-pulse"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-bounce"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+            </div>
+            <h1 class="text-6xl font-bold mb-4">CertiGen Studio</h1>
+            <p class="text-xl opacity-90 mb-12">Professional Certificate Generator</p>
+            <div class="w-80 mx-auto bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
+                <div id="loading-bar" class="h-full bg-gradient-to-r from-white to-yellow-300 rounded-full w-0 transition-all duration-300"></div>
+            </div>
+            <p class="mt-3 text-sm opacity-80">Loading workspace...</p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app-container" class="flex h-screen opacity-0 transition-opacity duration-500">
+        
+        <!-- Sidebar -->
+        <div class="w-80 bg-white/80 backdrop-blur-md border-r border-gray-200 flex flex-col h-full shadow-xl z-20">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
+                <h1 class="text-white font-bold text-lg">CertiGen Studio</h1>
+                <p class="text-sm text-white/90 mt-1">Professional Certificate Generator</p>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-8">
+                
+                <!-- Upload Section -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        Upload Assets
+                    </h3>
+
+                    <!-- Template Upload -->
+                    <div id="template-dropzone" class="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-2 text-blue-500 group-hover:-translate-y-1 transition-transform"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        <p class="text-sm text-gray-600">Upload Certificate Template</p>
+                        <p class="text-xs text-gray-400 mt-1">PNG, JPG (Max 10MB)</p>
+                        <input type="file" id="template-upload" class="hidden" accept="image/*">
+                    </div>
+
+                    <!-- Signature Upload -->
+                    <button onclick="document.getElementById('signature-upload').click()" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-50 hover:bg-purple-100 border border-purple-100 rounded-lg transition-all text-purple-700 text-sm font-medium">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 19.5v.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8.5L20 7.5V20l-2-2h-3.5"/><polyline points="14 2 14 8 20 8"/><path d="M2.5 8C6 7 7.5 5 11 5c2 0 4 2.5 2.5 6-.5 1-1.5 2-2.5 2-1 0-2.5-1-1.5-3 .5-1.5 2.5-2 4.5-2"/></svg>
+                        Add Signature
+                        <span id="signature-count" class="hidden ml-auto bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                    </button>
+                    <input type="file" id="signature-upload" class="hidden" accept="image/*">
+                </div>
+
+                <!-- Data Input Section -->
+                <div class="space-y-4 pt-4 border-t border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+                        Recipient Names
+                    </h3>
+                    
+                    <textarea id="names-input" placeholder="Enter names (one per line)&#10;John Doe&#10;Jane Smith" class="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"></textarea>
+                    
+                    <button onclick="document.getElementById('csv-upload').click()" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        Import CSV
+                    </button>
+                    <input type="file" id="csv-upload" class="hidden" accept=".csv">
+
+                    <p id="names-count" class="text-xs text-green-600 flex items-center gap-1 hidden">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span id="names-count-text">0 name(s) loaded</span>
+                    </p>
+
+                    <!-- Add Elements Buttons -->
+                    <div class="pt-2">
+                        <h3 class="text-sm text-gray-700 mb-2">Add Elements</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="add-text-btn" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md transition-transform active:scale-95">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+                                <span class="text-sm">Text</span>
+                            </button>
+                            <button id="add-qr-btn" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-lg shadow-md transition-transform active:scale-95">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+                                <span class="text-sm">QR Code</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Properties Panel -->
+                <div id="properties-panel" class="hidden space-y-4 pt-4 border-t border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/><circle cx="15" cy="18" r="2"/><circle cx="9" cy="6" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                        Edit Properties
+                    </h3>
+                    
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span id="prop-type-icon"></span>
+                            <span id="prop-type-name" class="text-sm font-medium text-gray-900">Element</span>
+                        </div>
+
+                        <!-- Dynamic Inputs -->
+                        <div id="prop-inputs" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Placeholder when no element selected -->
+                <div id="no-selection-msg" class="pt-4 border-t border-gray-200 text-center py-8 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-2 animate-spin-slow"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/><circle cx="15" cy="18" r="2"/><circle cx="9" cy="6" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                    <p class="text-sm">Select an element to edit</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="border-t border-gray-200 p-6 space-y-3 bg-gray-50">
+                <button id="export-pdf-btn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    Export as PDF
+                </button>
+                <button id="export-zip-btn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-black text-white rounded-lg shadow-lg hover:shadow-xl transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/><path d="m12 16-2-2"/><path d="m12 16 2-2"/></svg>
+                    Export Individual PDFs
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col h-full bg-gray-100 relative">
+            
+            <!-- Canvas Wrapper -->
+            <div class="flex-1 flex items-center justify-center p-8 overflow-auto canvas-container" id="canvas-scroll-area">
+                <div class="relative shadow-2xl rounded-lg overflow-hidden bg-white">
+                    
+                    <!-- Top Bar -->
+                    <div class="bg-gray-900 text-white px-4 py-2 flex items-center justify-between text-sm">
+                        <span>Certificate Preview</span>
+                        <span id="preview-name" class="text-gray-400">No names loaded</span>
+                    </div>
+
+                    <!-- The Canvas DOM -->
+                    <div id="canvas-area" class="relative bg-white transition-all" style="width: 800px; height: 600px; background-size: cover; background-position: center;">
+                        <!-- Placeholder Text -->
+                        <div id="canvas-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400 pointer-events-none">
+                            <div class="text-center">
+                                <p class="mb-2">Upload a certificate template to begin</p>
+                                <p class="text-sm">800 × 600 px</p>
+                            </div>
+                        </div>
+                        <!-- Elements will be injected here -->
+                    </div>
+
+                    <!-- Bottom Bar -->
+                    <div class="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-500">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/></svg>
+                            <span>Click and drag elements to reposition</span>
+                        </div>
+                        <span id="element-count">0 element(s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div id="status-bar" class="bg-white border-t border-gray-200 px-6 py-2 flex items-center gap-2 transition-colors duration-300">
+                <div id="status-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
+                </div>
+                <span id="status-text" class="text-sm text-gray-600">Ready to create certificates</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            templateUrl: null,
+            elements: [],
+            names: [],
+            signatures: [],
+            selectedElementId: null,
+            isDragging: false,
+            dragOffset: { x: 0, y: 0 },
+            draggedElementId: null
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            loadingScreen: document.getElementById('loading-screen'),
+            loadingBar: document.getElementById('loading-bar'),
+            appContainer: document.getElementById('app-container'),
+            templateUpload: document.getElementById('template-upload'),
+            templateDropzone: document.getElementById('template-dropzone'),
+            signatureUpload: document.getElementById('signature-upload'),
+            signatureCount: document.getElementById('signature-count'),
+            namesInput: document.getElementById('names-input'),
+            csvUpload: document.getElementById('csv-upload'),
+            namesCount: document.getElementById('names-count'),
+            namesCountText: document.getElementById('names-count-text'),
+            addTextBtn: document.getElementById('add-text-btn'),
+            addQrBtn: document.getElementById('add-qr-btn'),
+            canvasArea: document.getElementById('canvas-area'),
+            canvasPlaceholder: document.getElementById('canvas-placeholder'),
+            propertiesPanel: document.getElementById('properties-panel'),
+            propTypeIcon: document.getElementById('prop-type-icon'),
+            propTypeName: document.getElementById('prop-type-name'),
+            propInputs: document.getElementById('prop-inputs'),
+            noSelectionMsg: document.getElementById('no-selection-msg'),
+            elementCount: document.getElementById('element-count'),
+            previewName: document.getElementById('preview-name'),
+            statusText: document.getElementById('status-text'),
+            statusBar: document.getElementById('status-bar'),
+            statusIcon: document.getElementById('status-icon'),
+            exportPdfBtn: document.getElementById('export-pdf-btn'),
+            exportZipBtn: document.getElementById('export-zip-btn')
+        };
+
+        // --- Initialization ---
+        window.onload = () => {
+            // Simulate loading
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                els.loadingBar.style.width = `${progress}%`;
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        els.loadingScreen.style.opacity = '0';
+                        setTimeout(() => els.loadingScreen.remove(), 500);
+                        els.appContainer.classList.remove('opacity-0');
+                    }, 500);
+                }
+            }, 50);
+        };
+
+        // --- Core Logic Functions ---
+
+        function setStatus(msg, type = 'info') {
+            els.statusText.textContent = msg;
+            if (type === 'success') {
+                els.statusBar.className = "bg-green-50 border-t border-green-200 px-6 py-2 flex items-center gap-2 transition-colors duration-300";
+                els.statusText.className = "text-sm text-green-700";
+                els.statusIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+            } else {
+                els.statusBar.className = "bg-white border-t border-gray-200 px-6 py-2 flex items-center gap-2 transition-colors duration-300";
+                els.statusText.className = "text-sm text-gray-600";
+                els.statusIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>';
+            }
+        }
+
+        function renderCanvas() {
+            // Clear existing elements (except placeholder)
+            const existingEls = els.canvasArea.querySelectorAll('.canvas-element');
+            existingEls.forEach(el => el.remove());
+
+            // Handle background
+            if (state.templateUrl) {
+                els.canvasArea.style.backgroundImage = `url(${state.templateUrl})`;
+                els.canvasPlaceholder.classList.add('hidden');
+            } else {
+                els.canvasArea.style.backgroundImage = 'none';
+                els.canvasPlaceholder.classList.remove('hidden');
+            }
+
+            // Render elements
+            state.elements.forEach(el => {
+                const domEl = document.createElement('div');
+                domEl.className = `canvas-element absolute cursor-move select-none group ${state.selectedElementId === el.id ? 'ring-2 ring-blue-500 ring-offset-2' : 'hover:ring-2 hover:ring-gray-300'}`;
+                domEl.style.left = `${el.x}px`;
+                domEl.style.top = `${el.y}px`;
+                domEl.dataset.id = el.id;
+
+                // Delete Button
+                if (state.selectedElementId === el.id) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = "absolute -top-8 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:bg-red-600 transition-colors z-50";
+                    deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteElement(el.id);
+                    };
+                    domEl.appendChild(deleteBtn);
+                }
+
+                // Content
+                if (el.type === 'text') {
+                    domEl.style.fontSize = `${el.fontSize}px`;
+                    domEl.style.fontFamily = el.fontFamily;
+                    domEl.style.color = el.color;
+                    domEl.style.whiteSpace = 'nowrap';
+                    domEl.textContent = el.content || (state.names.length > 0 ? state.names[0] : 'Name Here');
+                } else if (el.type === 'signature') {
+                    const img = document.createElement('img');
+                    img.src = el.imageUrl;
+                    img.style.width = `${el.width}px`;
+                    img.style.height = `${el.height}px`;
+                    img.style.objectFit = 'contain';
+                    img.draggable = false;
+                    domEl.appendChild(img);
+                } else if (el.type === 'qr' && el.visible) {
+                    const img = document.createElement('img');
+                    img.style.width = `${el.width}px`;
+                    img.style.height = `${el.height}px`;
+                    img.draggable = false;
+                    // Generate QR
+                    QRCode.toDataURL(el.qrUrl || 'https://example.com', { width: el.width, margin: 1 }, (err, url) => {
+                        if (!err) img.src = url;
+                    });
+                    domEl.appendChild(img);
+                }
+
+                // Events
+                domEl.onmousedown = (e) => {
+                    e.stopPropagation();
+                    selectElement(el.id);
+                    startDrag(e, el.id);
+                };
+
+                els.canvasArea.appendChild(domEl);
+            });
+
+            els.elementCount.textContent = `${state.elements.length} element(s)`;
+            els.previewName.textContent = state.names.length > 0 ? `Showing: ${state.names[0]}` : 'No names loaded';
+        }
+
+        function renderProperties() {
+            if (!state.selectedElementId) {
+                els.propertiesPanel.classList.add('hidden');
+                els.noSelectionMsg.classList.remove('hidden');
+                return;
+            }
+
+            const el = state.elements.find(e => e.id === state.selectedElementId);
+            if (!el) return;
+
+            els.propertiesPanel.classList.remove('hidden');
+            els.noSelectionMsg.classList.add('hidden');
+            els.propInputs.innerHTML = ''; // Clear inputs
+
+            // Set Header Info
+            if (el.type === 'text') {
+                els.propTypeIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>';
+                els.propTypeName.textContent = 'Text Element';
+                
+                // Content
+                addTextInput('Content', el.content, (val) => updateElement(el.id, { content: val }));
+                // Font Family
+                addSelectInput('Font Family', el.fontFamily, ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana'], (val) => updateElement(el.id, { fontFamily: val }));
+                // Font Size
+                addRangeInput('Font Size', el.fontSize, 12, 120, (val) => updateElement(el.id, { fontSize: parseInt(val) }));
+                // Color
+                addColorInput('Color', el.color, (val) => updateElement(el.id, { color: val }));
+
+            } else if (el.type === 'qr') {
+                els.propTypeIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-pink-600"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/></svg>';
+                els.propTypeName.textContent = 'QR Code';
+
+                // URL
+                addTextInput('URL', el.qrUrl, (val) => updateElement(el.id, { qrUrl: val }));
+                // Size
+                addRangeInput('Size', el.width, 50, 300, (val) => updateElement(el.id, { width: parseInt(val), height: parseInt(val) }));
+                // Visibility
+                addToggleInput('Visible', el.visible, (val) => updateElement(el.id, { visible: val }));
+
+            } else if (el.type === 'signature') {
+                els.propTypeIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600"><path d="M20 19.5v.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8.5L20 7.5V20l-2-2h-3.5"/></svg>';
+                els.propTypeName.textContent = 'Signature';
+
+                // Width
+                addRangeInput('Width', el.width, 50, 400, (val) => updateElement(el.id, { width: parseInt(val) }));
+                // Height
+                addRangeInput('Height', el.height, 30, 200, (val) => updateElement(el.id, { height: parseInt(val) }));
+            }
+        }
+
+        // --- Helper for Inputs ---
+        function addTextInput(label, value, onChange) {
+            const div = document.createElement('div');
+            div.innerHTML = `<label class="text-xs text-gray-600 block mb-1">${label}</label>`;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = value || '';
+            input.className = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+            input.oninput = (e) => onChange(e.target.value);
+            div.appendChild(input);
+            els.propInputs.appendChild(div);
+        }
+
+        function addSelectInput(label, value, options, onChange) {
+            const div = document.createElement('div');
+            div.innerHTML = `<label class="text-xs text-gray-600 block mb-1">${label}</label>`;
+            const select = document.createElement('select');
+            select.className = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.text = opt;
+                if (opt === value) option.selected = true;
+                select.appendChild(option);
+            });
+            select.onchange = (e) => onChange(e.target.value);
+            div.appendChild(select);
+            els.propInputs.appendChild(div);
+        }
+
+        function addRangeInput(label, value, min, max, onChange) {
+            const div = document.createElement('div');
+            div.innerHTML = `<label class="text-xs text-gray-600 block mb-1">${label}: <span class="val">${value}</span>px</label>`;
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.min = min;
+            input.max = max;
+            input.value = value;
+            input.oninput = (e) => {
+                div.querySelector('.val').textContent = e.target.value;
+                onChange(e.target.value);
+            };
+            div.appendChild(input);
+            els.propInputs.appendChild(div);
+        }
+
+        function addColorInput(label, value, onChange) {
+            const div = document.createElement('div');
+            div.innerHTML = `<label class="text-xs text-gray-600 block mb-1">${label}</label>`;
+            const flex = document.createElement('div');
+            flex.className = "flex gap-2";
+            const color = document.createElement('input');
+            color.type = 'color';
+            color.value = value;
+            color.className = "w-12 h-10 rounded border border-gray-300 cursor-pointer p-1";
+            const text = document.createElement('input');
+            text.type = 'text';
+            text.value = value;
+            text.className = "flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm";
+            
+            color.oninput = (e) => { text.value = e.target.value; onChange(e.target.value); };
+            text.oninput = (e) => { color.value = e.target.value; onChange(e.target.value); };
+            
+            flex.appendChild(color);
+            flex.appendChild(text);
+            div.appendChild(flex);
+            els.propInputs.appendChild(div);
+        }
+
+        function addToggleInput(label, checked, onChange) {
+            const div = document.createElement('div');
+            div.className = "flex items-center justify-between";
+            div.innerHTML = `<label class="text-xs text-gray-600">${label}</label>`;
+            const btn = document.createElement('button');
+            btn.className = `relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-blue-500' : 'bg-gray-300'}`;
+            btn.innerHTML = `<span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}"></span>`;
+            btn.onclick = () => onChange(!checked);
+            div.appendChild(btn);
+            els.propInputs.appendChild(div);
+        }
+
+
+        // --- Actions ---
+
+        function updateElement(id, updates) {
+            const idx = state.elements.findIndex(el => el.id === id);
+            if (idx !== -1) {
+                state.elements[idx] = { ...state.elements[idx], ...updates };
+                renderCanvas();
+                if (id === state.selectedElementId) {
+                    // Update property panel if needed (specifically for synced fields like color hex/picker)
+                    // Simple re-render works but might lose focus on inputs. 
+                    // For now, assume inputs handle their own display updates via 'value' prop binding in framework, 
+                    // here we just re-render canvas. 
+                }
+            }
+        }
+
+        function deleteElement(id) {
+            state.elements = state.elements.filter(el => el.id !== id);
+            if (state.selectedElementId === id) {
+                state.selectedElementId = null;
+                renderProperties();
+            }
+            renderCanvas();
+            setStatus('Element deleted');
+        }
+
+        function selectElement(id) {
+            state.selectedElementId = id;
+            renderCanvas();
+            renderProperties();
+        }
+
+        // --- Drag Logic ---
+        function startDrag(e, id) {
+            state.isDragging = true;
+            state.draggedElementId = id;
+            const el = state.elements.find(e => e.id === id);
+            const rect = els.canvasArea.getBoundingClientRect();
+            state.dragOffset = {
+                x: e.clientX - rect.left - el.x,
+                y: e.clientY - rect.top - el.y
+            };
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            if (!state.isDragging || !state.draggedElementId) return;
+            const rect = els.canvasArea.getBoundingClientRect();
+            const x = Math.max(0, e.clientX - rect.left - state.dragOffset.x);
+            const y = Math.max(0, e.clientY - rect.top - state.dragOffset.y);
+            
+            updateElement(state.draggedElementId, { x, y });
+        });
+
+        window.addEventListener('mouseup', () => {
+            state.isDragging = false;
+            state.draggedElementId = null;
+        });
+
+        els.canvasArea.addEventListener('click', (e) => {
+            if (e.target === els.canvasArea) {
+                selectElement(null);
+            }
+        });
+
+        // --- Event Listeners ---
+
+        // Template Upload
+        els.templateUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                state.templateUrl = URL.createObjectURL(file);
+                renderCanvas();
+                setStatus('Template uploaded successfully', 'success');
+            }
+        });
+        els.templateDropzone.onclick = () => els.templateUpload.click();
+
+        // Signature Upload
+        els.signatureUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                state.signatures.push(url);
+                
+                // Add to canvas immediately
+                const newSig = {
+                    id: `sig-${Date.now()}`,
+                    type: 'signature',
+                    x: 100, y: 400,
+                    width: 150, height: 75,
+                    imageUrl: url
+                };
+                state.elements.push(newSig);
+                
+                // Update Badge
+                els.signatureCount.textContent = state.signatures.length;
+                els.signatureCount.classList.remove('hidden');
+                
+                renderCanvas();
+                setStatus('Signature added to canvas', 'success');
+                e.target.value = '';
+            }
+        });
+
+        // Names Input
+        const updateNames = (names) => {
+            state.names = names;
+            if (names.length > 0) {
+                els.namesCount.classList.remove('hidden');
+                els.namesCountText.textContent = `${names.length} name(s) loaded`;
+                setStatus(`${names.length} name(s) loaded`, 'success');
+            } else {
+                els.namesCount.classList.add('hidden');
+            }
+            renderCanvas(); // Updates preview name
+        };
+
+        els.namesInput.addEventListener('input', (e) => {
+            const names = e.target.value.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            updateNames(names);
+        });
+
+        // CSV Upload
+        els.csvUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const text = evt.target.result;
+                    const names = text.split('\n').map(l => l.split(',')[0].trim()).filter(n => n.length > 0);
+                    els.namesInput.value = names.join('\n');
+                    updateNames(names);
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            }
+        });
+
+        // Add Elements
+        els.addTextBtn.onclick = () => {
+            const newText = {
+                id: `text-${Date.now()}`,
+                type: 'text',
+                x: 200, y: 200,
+                content: state.names[0] || 'Name Here',
+                fontSize: 32,
+                fontFamily: 'Arial',
+                color: '#000000'
+            };
+            state.elements.push(newText);
+            selectElement(newText.id);
+            setStatus('Text element added');
+        };
+
+        els.addQrBtn.onclick = () => {
+            const newQr = {
+                id: `qr-${Date.now()}`,
+                type: 'qr',
+                x: 600, y: 400,
+                width: 100, height: 100,
+                qrUrl: 'https://example.com',
+                visible: true
+            };
+            state.elements.push(newQr);
+            selectElement(newQr.id);
+            setStatus('QR code added');
+        };
+
+        // --- Export Logic ---
+        
+        async function generateCanvasForName(name) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+
+            // Draw Background
+            if (state.templateUrl) {
+                await new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.drawImage(img, 0, 0, 800, 600);
+                        resolve();
+                    };
+                    img.src = state.templateUrl;
+                });
+            } else {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 800, 600);
+            }
+
+            // Draw Elements
+            for (const el of state.elements) {
+                if (el.type === 'text') {
+                    ctx.font = `${el.fontSize}px ${el.fontFamily}`;
+                    ctx.fillStyle = el.color;
+                    const content = el.content === 'Name Here' || el.content === state.names[0] ? name : el.content;
+                    ctx.fillText(content || name, el.x, el.y + el.fontSize); // fillText uses baseline, adjust slightly
+                } else if (el.type === 'signature') {
+                    await new Promise(resolve => {
+                        const img = new Image();
+                        img.onload = () => {
+                            ctx.drawImage(img, el.x, el.y, el.width, el.height);
+                            resolve();
+                        };
+                        img.src = el.imageUrl;
+                    });
+                } else if (el.type === 'qr' && el.visible) {
+                    await new Promise(resolve => {
+                        QRCode.toDataURL(el.qrUrl, { width: el.width, margin: 0 }, (err, url) => {
+                            if (!err) {
+                                const img = new Image();
+                                img.onload = () => {
+                                    ctx.drawImage(img, el.x, el.y, el.width, el.height);
+                                    resolve();
+                                };
+                                img.src = url;
+                            } else resolve();
+                        });
+                    });
+                }
+            }
+            return canvas;
+        }
+
+        els.exportPdfBtn.onclick = async () => {
+            if (!state.templateUrl) return setStatus('Please upload a template first', 'error');
+            if (state.names.length === 0) return setStatus('Please add recipient names', 'error');
+
+            setStatus('Generating PDF...');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] });
+
+            for (let i = 0; i < state.names.length; i++) {
+                if (i > 0) doc.addPage();
+                const canvas = await generateCanvasForName(state.names[i]);
+                doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 800, 600);
+            }
+            doc.save('certificates.pdf');
+            setStatus(`Exported ${state.names.length} certificates`, 'success');
+        };
+
+        els.exportZipBtn.onclick = async () => {
+            if (!state.templateUrl) return setStatus('Please upload a template first', 'error');
+            if (state.names.length === 0) return setStatus('Please add recipient names', 'error');
+
+            setStatus('Generating files...');
+            const { jsPDF } = window.jspdf;
+
+            for (let i = 0; i < state.names.length; i++) {
+                const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] });
+                const canvas = await generateCanvasForName(state.names[i]);
+                doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 800, 600);
+                doc.save(`certificate_${state.names[i].replace(/\s+/g, '_')}.pdf`);
+            }
+            setStatus(`Exported ${state.names.length} files`, 'success');
+        };
+
+    </script>
+</body>
+</html>
